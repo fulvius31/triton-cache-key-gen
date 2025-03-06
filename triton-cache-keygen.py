@@ -14,15 +14,6 @@ from triton import __version__
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-ENV_VAR_PREFIX = "TRITON_"
-BLACKLIST: Set[str] = frozenset({
-    "TRITON_CACHE_DIR",      # Affects storage location, not content
-    "TRITON_DUMP_IR",        # Debug output doesn't change binaries
-    "TRITON_LOG_LEVEL",      # Logging verbosity is not codegen changes
-    "TRITON_ENABLE_PROFILING", # Runtime behavior only
-    "TRITON_DEBUG",          # Even if it changes the cache key, it is handled in the debug option
-    "TRITON_STORE_BINARY_ONLY" # Affect storing the IRs not the cache key
-})
 
 def parse_args() -> argparse.Namespace:
     """Parse command-line arguments"""
@@ -50,19 +41,11 @@ def get_current_target() -> str:
         logger.error("Failed to get current target: %s", e)
         return "unknown-backend-0-0"
 
-def get_env_vars_for_cache() -> Dict[str, str]:
+def get_env_vars_for_cache() -> Dict[str]:
     """Collect all environment variables that affect the cache key."""
     core_vars = get_cache_invalidating_env_vars()
     
-    # Add TRITON_* vars not in core list but likely impactful
-    extra_vars = {
-        k: v for k, v in os.environ.items()
-        if k.startswith(ENV_VAR_PREFIX)
-        and k not in BLACKLIST
-        and k not in core_vars
-    }
-    
-    return {**core_vars, **extra_vars}
+    return core_vars
 
 def triton_base_encoding(key: str) -> str:
     # In early versions of Triton, the hash is directly used in the path name.
