@@ -47,25 +47,25 @@ def get_env_vars_for_cache() -> Dict[str]:
     
     return core_vars
 
-def triton_base_encoding(key: str) -> str:
-    # In early versions of Triton, the hash is directly used in the path name.
-    # Later, the hash is converted to base64 before being used in the path name.
-    # Later, the base64 convertion was replaced to the base32
-    #
-    # This code tries to import _base64 and falls back to _base32 if _base64 is unavailable.
-    #
-    # To handle this, try to import the to-base64-conversion function.
-    # If it exists, use it; otherwise, try using _base32; if both are unavailable, use the hash directly.
-    try:
-        from triton.runtime.cache import _base64
-        return _base64(key)
-    except Exception as e:
-        try:
-            from triton.runtime.cache import _base32
-
-            return _base32(key)
-        except Exception as e:
-            return key
+#def triton_base_encoding(key: str) -> str:
+#    # In early versions of Triton, the hash is directly used in the path name.
+#    # Later, the hash is converted to base64 before being used in the path name.
+#    # Later, the base64 convertion was replaced to the base32
+#    #
+#    # This code tries to import _base64 and falls back to _base32 if _base64 is unavailable.
+#    #
+#    # To handle this, try to import the to-base64-conversion function.
+#    # If it exists, use it; otherwise, try using _base32; if both are unavailable, use the hash directly.
+#    try:
+#        from triton.runtime.cache import _base64
+#        return _base64(key)
+#    except Exception as e:
+#        try:
+#            from triton.runtime.cache import _base32
+#
+#            return _base32(key)
+#        except Exception as e:
+#            return key
 
 def generate_triton_cache_key(source_hash: str | None = None) -> Tuple[str, Dict[str, Any]]:
     """
@@ -124,7 +124,7 @@ def generate_triton_cache_key(source_hash: str | None = None) -> Tuple[str, Dict
         components['final_composite'] = key_components
         
         final_hash = hashlib.sha256(key_components.encode()).hexdigest()
-        return triton_base_encoding(final_hash), components
+        return final_hash, components
 
     except Exception as e:
         logger.error("Failed to generate cache key: %s", e)
