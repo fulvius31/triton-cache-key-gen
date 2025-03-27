@@ -47,6 +47,31 @@ def get_env_vars_for_cache() -> Dict[str]:
     
     return core_vars
 
+def get_extern_libs() -> str:
+    import sys
+    from triton.runtime.jit import JITFunction
+    from triton.runtime.driver import driver
+
+    jit_funcs = []
+    for module_name, module in sys.modules.items():
+        for attr_name in dir(module):
+            try:
+                attr = getattr(module, attr_name)
+                if isinstance(attr, JITFunction):
+                    jit_funcs.append((module_name, attr_name, attr))
+            except:
+                pass
+
+    for module_name, func_name, jit_func in jit_funcs:
+        logger.debug(f"Found JIT function: {module_name}.{func_name}")
+
+    device = driver.active.get_current_device()
+    kernel_cache = jit_func.device_caches[device][2]
+    options = kernel_cache.parse_options({})
+    extern_libs = dict(options.extern_libs)
+
+    return f"{extern_libs}"
+
 #def triton_base_encoding(key: str) -> str:
 #    # In early versions of Triton, the hash is directly used in the path name.
 #    # Later, the hash is converted to base64 before being used in the path name.
@@ -74,6 +99,8 @@ def generate_triton_cache_key(source_hash: str | None = None) -> Tuple[str, Dict
     Returns:
         Tuple of (base{32|64}-encoded key, components dictionary)
     """
+    extern_libs = get_extern_libs()
+
     components = {}
     
     try:
@@ -99,7 +126,8 @@ def generate_triton_cache_key(source_hash: str | None = None) -> Tuple[str, Dict
         options = {
             "num_warps": 4,
             "num_stages": 3,
-            "debug": os.getenv("TRITON_DEBUG", "0") == "1"
+            "debug": os.getenv("TRITON_DEBUG", "0") == "1",
+            "extern_libs": extern_libs,
         }
         components['options'] = {
             'values': options,
